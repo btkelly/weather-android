@@ -6,6 +6,10 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
@@ -39,19 +43,29 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 
+import classes.DownloadWeatherTask;
 import classes.VerifiedEditText;
+import classes.Weather;
 import fragments.CityFragment;
 
 public class MainActivity extends Activity {
-    private ArrayList<String> mCitiesList;
-    private ArrayAdapter<String> mCitiesAdapter;
+    public static ArrayList<Weather> mCitiesList;
+    public static ArrayAdapter<Weather> mCitiesAdapter;
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
 
+    private LocationManager locationManager;
+    private String provider;
+    private Location location;
+
     static final int ADD_ZIP_CODE_REQUEST = 100;  // The request code
     static final String ZIP_CODE = "zip_code";
-    static final String APP_DEBUG = "lolsup";
+    public static final String APP_DEBUG = "lolsup";
+
+    static final int ZIP_CODE_MIN = 10000;
+    static final int ZIP_CODE_MAX = 99999;
+
     final Context context = this;
 
     @Override
@@ -59,10 +73,10 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mCitiesList = new ArrayList<String>();
+        mCitiesList = new ArrayList<Weather>();
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
-        mCitiesAdapter = new ArrayAdapter<String>(this, R.layout.drawer_list_item, mCitiesList);
+        mCitiesAdapter = new ArrayAdapter<Weather>(this, R.layout.drawer_list_item, mCitiesList);
         // Set the adapter for the list view
         mDrawerList.setAdapter(mCitiesAdapter);
 
@@ -77,6 +91,22 @@ public class MainActivity extends Activity {
         getActionBar().setDisplayHomeAsUpEnabled(true);
         getActionBar().setHomeButtonEnabled(true);
 
+        // Get the location manager
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        // Define the criteria how to select the location provider -> use
+        // default
+        Criteria criteria = new Criteria();
+        provider = locationManager.getBestProvider(criteria, false);
+        location = locationManager.getLastKnownLocation(provider);
+
+        // Initialize the location fields
+        if (location != null) {
+            Log.i(APP_DEBUG, "Provider " + provider + " has been selected.");
+            // onLocationChanged(location);
+        } else {
+            // nothing now
+        }
+
     }
 
     @Override
@@ -89,6 +119,7 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         Log.i(APP_DEBUG, "MainActivity: onPause()");
+        // locationManager.removeUpdates(LocationListener l);
     }
 
     @Override
@@ -149,7 +180,9 @@ public class MainActivity extends Activity {
             case R.id.action_get_location:
                 // Get GPS coordinates
                 // Make request to Weather API
-                makeToast("Get GPS coordinates");
+                // makeToast("Get GPS coordinates");
+                // onLocationChanged(location);
+                makeFragment(location.getLatitude(), location.getLongitude());
                 return true;
             case R.id.action_refresh:
                 makeToast("Refresh weather");
@@ -166,12 +199,17 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+    // @Override
+    public void onLocationChanged(Location location) {
+
+        // makeToast(lat + ", " + lng);
+    }
+
     /** Swaps fragments in the main content view */
     private void selectItem(int position, String zipCode) {
         // Create a new fragment and specify the planet to show based on position
         Fragment fragment = new CityFragment();
         Bundle args = new Bundle();
-        // args.putInt(CityFragment.ARG_CITY_NUMBER, position);
         args.putString(CityFragment.ARG_ZIP_CODE, zipCode);
         fragment.setArguments(args);
 
@@ -190,7 +228,7 @@ public class MainActivity extends Activity {
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
         @Override
         public void onItemClick(AdapterView parent, View view, int position, long id) {
-            String zip = (String) parent.getItemAtPosition(position);
+            // String zip = (String) parent.getItemAtPosition(position);
             // selectItem(position, zip);
         }
     }
@@ -252,13 +290,13 @@ public class MainActivity extends Activity {
                 .setView(input)
                 .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        int value = Integer.parseInt(input.getText().toString().trim());
-                        if (value >= 10000 && value <= 99999) {
-                            mCitiesList.add(Integer.toString(value));
-                            mCitiesAdapter.notifyDataSetChanged();
-                            // Toast.makeText(context, value, Toast.LENGTH_SHORT).show();
-                            // makeFragment(value);
-                            new DownloadWeatherTask(value).execute("");
+                        int zip = input.getText().toString().equalsIgnoreCase("") ? 0 : Integer.parseInt(input.getText().toString().trim());
+                        if (zip >= ZIP_CODE_MIN && zip <= ZIP_CODE_MAX) {
+                            // mCitiesList.add(Integer.toString(zip));
+                            // mCitiesAdapter.notifyDataSetChanged();
+                            // start background weather task
+                            // new DownloadWeatherTask(zip).execute("");
+                            makeFragment(zip);
                             dialog.dismiss();
                         } else {
                             Toast.makeText(context, "Need complete zip code", Toast.LENGTH_SHORT).show();
@@ -273,14 +311,11 @@ public class MainActivity extends Activity {
                 .show();
     }
 
-    public void makeFragment(int zip, String city, String state, String temp) {
+    public void makeFragment(int zip) {
         // Create a new fragment and specify the zip code from the dialog
         Fragment fragment = new CityFragment();
         Bundle args = new Bundle();
         args.putInt(CityFragment.ARG_ZIP_CODE, zip);
-        args.putString(CityFragment.ARG_CITY, city);
-        args.putString(CityFragment.ARG_STATE, state);
-        args.putString(CityFragment.ARG_TEMPERATURE, temp);
         fragment.setArguments(args);
 
         // Insert the fragment by replacing any existing fragment
@@ -290,91 +325,25 @@ public class MainActivity extends Activity {
                 .commit();
     }
 
-    private class DownloadWeatherTask extends AsyncTask<String, String, String> {
+    public void makeFragment(double lat, double lng) {
+        // Create a new fragment and specify the zip code from the dialog
+        Fragment fragment = new CityFragment();
+        Bundle args = new Bundle();
+        args.putDouble(CityFragment.ARG_LAT, lat);
+        args.putDouble(CityFragment.ARG_LNG, lng);
+        fragment.setArguments(args);
 
-        int count = 0;
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
 
-        private ProgressBar progressBar;
-        private Fragment fragment;
-        private int zip;
-        private StringBuffer result;
+    }
 
-        // Weather infos
-        String city, state, tempString;
-
-        // API stuff
-        private String BASE_URL = "http://api.wunderground.com/api/";
-        private String API_KEY = "0a80de5d54554b74";
-        private String MID_URL = "/conditions/q/";
-        private String END_URL = ".json";
-
-        DownloadWeatherTask(int i) {
-            // this.fragment = fragment;
-            zip = i;
-            progressBar = (ProgressBar) findViewById(R.id.weatherProgressBar);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            progressBar.setVisibility(ProgressBar.VISIBLE);
-        }
-
-        @Override
-        protected String doInBackground(String... strings) {
-            ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-            NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-            if (networkInfo != null && networkInfo.isConnected()) {
-                try {
-                    StringBuffer sb = makeWeatherAPICall(zip);
-                    Log.i(MainActivity.APP_DEBUG, sb.toString());
-                    try {
-                        JSONObject root = new JSONObject(sb.toString());
-                        JSONObject data = root.getJSONObject("current_observation");
-                        city = data.getJSONObject("display_location").getString("city");
-                        state = data.getJSONObject("display_location").getString("state");
-                        tempString = data.getString("temperature_string");
-                        Log.i(MainActivity.APP_DEBUG, city);
-                    } catch (JSONException e) {
-                        Log.i(MainActivity.APP_DEBUG, "City doesn't exist");
-                        e.printStackTrace();
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                // no connectivity
-            }
-            return "Complete";
-        }
-
-        /** Make a call to the Wunderground API and return a StringBuffer on success*/
-        private StringBuffer makeWeatherAPICall(int zip) throws IOException {
-            String apiUrl = BASE_URL + API_KEY + MID_URL + Integer.toString(zip) + END_URL;
-            URL url = new URL(apiUrl);
-            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-            try {
-                InputStream inputStream = new BufferedInputStream(urlConnection.getInputStream());
-                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-                result = new StringBuffer();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    result.append(line);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                urlConnection.disconnect();
-            }
-            return result;
-        }
-
-        @Override
-        protected void onPostExecute(String string) {
-            super.onPostExecute(string);
-            progressBar.setVisibility(ProgressBar.GONE);
-            MainActivity.this.makeFragment(zip, city, state, tempString);
-        }
+    public static void addToNavigationDrawer(Weather weather) {
+        mCitiesList.add(weather);
+        mCitiesAdapter.notifyDataSetChanged();
     }
 }
 

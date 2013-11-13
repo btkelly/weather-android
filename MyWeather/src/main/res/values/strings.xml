@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">MyWeather</string>
+    <string name="app_name">Weather</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="action_new">Add city</string>
@@ -10,5 +10,6 @@
     <string name="drawer_open">Open</string>
     <string name="drawer_close">Close</string>
     <string name="title_activity_weather_request">WeatherRequestActivity</string>
+    <string name="unsuccessful_weather_request">The zip code you entered does not exist. Please try again.</string>
 
 </resources>

@@ -1,51 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical" android:layout_width="match_parent"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ImageView
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:id="@+id/weatherViewFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/weatherImage"
+            android:layout_centerVertical="true"
+            android:layout_centerHorizontal="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="City"
+            android:id="@+id/weatherCity"
+            android:layout_marginTop="40dp"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceMedium"
+            android:text="Zip Code"
+            android:id="@+id/weatherZipCode"
+            android:layout_alignParentTop="false"
+            android:layout_centerHorizontal="true"
+            android:layout_below="@+id/weatherCity"
+            android:layout_marginTop="40dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="High"
+            android:textSize="100dp"
+            android:id="@+id/weatherHigh"
+            android:layout_below="@+id/weatherImage"
+            android:layout_centerInParent="true"
+            android:layout_marginTop="50dp" />
+
+    </RelativeLayout>
+
+    <ProgressBar
+        android:id="@+id/weatherProgressBar"
         android:layout_height="wrap_content"
-        android:id="@+id/weatherImage"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true" />
+        android:layout_width="match_parent"
+        android:layout_gravity="center_vertical|center_horizontal"
+        android:layout_centerInParent="true"
+        android:visibility="visible"
+        android:indeterminate="true" />
 
     <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:id="@+id/unsuccessfulWeatherText"
         android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="City"
-        android:id="@+id/weatherCity"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="45dp" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal|center_vertical"
+        android:text="@string/unsuccessful_weather_request"
+        android:visibility="visible"/>
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Zip Code"
-        android:id="@+id/weatherZipCode"
-        android:layout_alignParentTop="false"
-        android:layout_centerHorizontal="true"
-        android:layout_below="@+id/weatherCity"
-        android:layout_marginTop="45dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="High"
-        android:id="@+id/weatherHigh"
-        android:layout_below="@+id/weatherImage"
-        android:layout_marginTop="50dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Low"
-        android:id="@+id/weatherLow"
-        android:layout_alignBottom="@+id/weatherImage"/>
 </RelativeLayout>
