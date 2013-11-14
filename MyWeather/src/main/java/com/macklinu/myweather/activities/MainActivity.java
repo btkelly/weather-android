@@ -8,13 +8,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.location.Criteria;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.v4.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
 import android.util.Log;
@@ -24,26 +21,12 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.macklinu.myweather.R;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 
-import classes.DownloadWeatherTask;
 import classes.VerifiedEditText;
 import classes.Weather;
 import fragments.CityFragment;
@@ -55,6 +38,7 @@ public class MainActivity extends Activity {
     private ListView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
 
+    private boolean hasNetworkConnectivity;
     private LocationManager locationManager;
     private String provider;
     private Location location;
@@ -63,9 +47,6 @@ public class MainActivity extends Activity {
     static final String ZIP_CODE = "zip_code";
     public static final String APP_DEBUG = "lolsup";
 
-    static final int ZIP_CODE_MIN = 10000;
-    static final int ZIP_CODE_MAX = 99999;
-
     final Context context = this;
 
     @Override
@@ -73,11 +54,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mCitiesList = new ArrayList<Weather>();
         mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mDrawerList = (ListView) findViewById(R.id.left_drawer);
+        // Create and set the adapter for the list view
+        mCitiesList = new ArrayList<Weather>();
         mCitiesAdapter = new ArrayAdapter<Weather>(this, R.layout.drawer_list_item, mCitiesList);
-        // Set the adapter for the list view
         mDrawerList.setAdapter(mCitiesAdapter);
 
         // Set the list's click listener
@@ -99,6 +80,12 @@ public class MainActivity extends Activity {
         provider = locationManager.getBestProvider(criteria, false);
         location = locationManager.getLastKnownLocation(provider);
 
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        if (networkInfo != null && networkInfo.isConnected())
+            hasNetworkConnectivity = true;
+        else
+            hasNetworkConnectivity = false;
         // Initialize the location fields
         if (location != null) {
             Log.i(APP_DEBUG, "Provider " + provider + " has been selected.");
@@ -182,11 +169,8 @@ public class MainActivity extends Activity {
                 // Make request to Weather API
                 // makeToast("Get GPS coordinates");
                 // onLocationChanged(location);
-                makeFragment(location.getLatitude(), location.getLongitude());
-                return true;
-            case R.id.action_refresh:
-                makeToast("Refresh weather");
-                // Update current weather settings for current stored location
+                if (hasNetworkConnectivity)
+                    makeFragment(location.getLatitude(), location.getLongitude());
                 return true;
             case R.id.action_settings:
                 makeToast("Settings");
@@ -199,14 +183,11 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    // @Override
-    public void onLocationChanged(Location location) {
-
-        // makeToast(lat + ", " + lng);
-    }
-
-    /** Swaps fragments in the main content view */
+    /**
+     * Swaps fragments in the main content view
+     */
     private void selectItem(int position, String zipCode) {
+        /*
         // Create a new fragment and specify the planet to show based on position
         Fragment fragment = new CityFragment();
         Bundle args = new Bundle();
@@ -218,6 +199,8 @@ public class MainActivity extends Activity {
         fragmentManager.beginTransaction()
                 .replace(R.id.content_frame, fragment)
                 .commit();
+        */
+        // makeFragment();
 
         // Highlight the selected item, update the title, and close the drawer
         mDrawerList.setItemChecked(position, true);
@@ -228,14 +211,15 @@ public class MainActivity extends Activity {
     private class DrawerItemClickListener implements ListView.OnItemClickListener {
         @Override
         public void onItemClick(AdapterView parent, View view, int position, long id) {
-            // String zip = (String) parent.getItemAtPosition(position);
+            Weather w = (Weather) parent.getItemAtPosition(position);
+            makeFragment(w);
             // selectItem(position, zip);
         }
     }
 
     private class CustomActionBarDrawerToggle extends ActionBarDrawerToggle {
 
-        public CustomActionBarDrawerToggle(Activity mActivity,DrawerLayout mDrawerLayout){
+        public CustomActionBarDrawerToggle(Activity mActivity, DrawerLayout mDrawerLayout) {
             super(
                     mActivity,               /* host Activity */
                     mDrawerLayout,           /* DrawerLayout object */
@@ -245,14 +229,18 @@ public class MainActivity extends Activity {
         }
 
 
-        /** Called when a drawer has settled in a completely closed state. */
+        /**
+         * Called when a drawer has settled in a completely closed state.
+         */
         @Override
         public void onDrawerClosed(View view) {
             invalidateOptionsMenu();
             // getActionBar().setTitle(mTitle);
         }
 
-        /** Called when a drawer has settled in a completely open state. */
+        /**
+         * Called when a drawer has settled in a completely open state.
+         */
         @Override
         public void onDrawerOpened(View drawerView) {
             invalidateOptionsMenu();
@@ -260,14 +248,16 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** Called whenever we call invalidateOptionsMenu() */
+    /**
+     * Called whenever we call invalidateOptionsMenu()
+     */
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         // If the nav drawer is open, hide action items related to the content view
         boolean drawerOpen = mDrawerLayout.isDrawerOpen(mDrawerList);
         menu.findItem(R.id.action_new).setVisible(true);
         menu.findItem(R.id.action_get_location).setVisible(!drawerOpen);
-        menu.findItem(R.id.action_refresh).setVisible(!drawerOpen);
+        // menu.findItem(R.id.action_refresh).setVisible(!drawerOpen);
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -290,16 +280,15 @@ public class MainActivity extends Activity {
                 .setView(input)
                 .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int whichButton) {
-                        int zip = input.getText().toString().equalsIgnoreCase("") ? 0 : Integer.parseInt(input.getText().toString().trim());
-                        if (zip >= ZIP_CODE_MIN && zip <= ZIP_CODE_MAX) {
-                            // mCitiesList.add(Integer.toString(zip));
-                            // mCitiesAdapter.notifyDataSetChanged();
-                            // start background weather task
-                            // new DownloadWeatherTask(zip).execute("");
-                            makeFragment(zip);
+                        // validate input
+                        if (input.isValid()) {
+                            if (hasNetworkConnectivity)
+                                makeFragment(input.getZipCode());
+                            else
+                                makeToast("No network available");
                             dialog.dismiss();
                         } else {
-                            Toast.makeText(context, "Need complete zip code", Toast.LENGTH_SHORT).show();
+                            makeToast("Need 5-digit zip code");
                         }
                     }
                 })
@@ -316,6 +305,23 @@ public class MainActivity extends Activity {
         Fragment fragment = new CityFragment();
         Bundle args = new Bundle();
         args.putInt(CityFragment.ARG_ZIP_CODE, zip);
+        fragment.setArguments(args);
+
+        // Insert the fragment by replacing any existing fragment
+        FragmentManager fragmentManager = getFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.content_frame, fragment)
+                .commit();
+    }
+
+    public void makeFragment(Weather w) {
+        // Create a new fragment and specify the zip code from the dialog
+        Fragment fragment = new CityFragment();
+        Bundle args = new Bundle();
+        args.putInt(CityFragment.ARG_ZIP_CODE, Integer.parseInt(w.getZipCode()));
+        args.putString(CityFragment.ARG_CITY, w.getCity());
+        args.putString(CityFragment.ARG_STATE, w.getState());
+        args.putString(CityFragment.ARG_TEMPERATURE, w.getHigh());
         fragment.setArguments(args);
 
         // Insert the fragment by replacing any existing fragment
@@ -342,8 +348,10 @@ public class MainActivity extends Activity {
     }
 
     public static void addToNavigationDrawer(Weather weather) {
-        mCitiesList.add(weather);
-        mCitiesAdapter.notifyDataSetChanged();
+        if (!mCitiesList.contains(weather)) {
+            mCitiesList.add(weather);
+            mCitiesAdapter.notifyDataSetChanged();
+        }
     }
 }
 

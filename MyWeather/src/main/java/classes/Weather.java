@@ -12,11 +12,24 @@ public class Weather {
     public String mZipCode;
     public String mHigh;
 
-    public Weather() {}
+    public Weather() {
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return this.mZipCode.hashCode() == ((Weather) o).mZipCode.hashCode();
+    }
 
     @Override
     public String toString() {
-        return mCity;
+        return mCity + " (" + mZipCode + ")";
+    }
+
+    public boolean isNull() {
+        if (this.toString().equalsIgnoreCase("null (null)"))
+            return true;
+        else
+            return false;
     }
 
     public void setCity(String city) {
@@ -38,7 +51,7 @@ public class Weather {
     public void setHigh(String high) {
         mHigh = high;
     }
-    
+
     public String getCity() {
         return mCity;
     }
